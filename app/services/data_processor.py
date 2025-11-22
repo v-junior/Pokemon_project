@@ -4,7 +4,11 @@ Author: Vilmar Junior
 Project: Challenge Assignment
 """
 
+import logging
 from typing import Dict, Any, List, Optional
+
+
+logger = logging.getLogger(__name__)
 
 
 class DataProcessor:
@@ -32,7 +36,7 @@ class DataProcessor:
             return pokemon_data
             
         except Exception as e:
-            print(f"Error processing Pokemon data: {e}")
+            logger.exception(f"Error processing Pokemon data: {e}")
             return None
     
     @staticmethod

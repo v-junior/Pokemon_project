@@ -1,7 +1,9 @@
 # Pokemon Scout API
 
 **Author:** Vilmar Junior  
-**Project Type:** Challenge Assignment
+**Project Type:** Challenge Assignment  
+**Version:** 1.1.0  
+**Latest Changes:** See [CHANGELOG.md](CHANGELOG.md)
 
 A Flask application that fetches and stores Pokemon data from PokeAPI. Built as a technical challenge to demonstrate skills in API integration, data processing, database design, and web development.
 
@@ -14,13 +16,17 @@ A Flask application that fetches and stores Pokemon data from PokeAPI. Built as 
 - **CLI Tool**: Command-line interface for batch operations
 - **Interactive Menu**: User-friendly terminal menu for easy navigation
 - **Reusable**: Easy to configure for any Pokemon
+- **Configuration**: Environment-based configuration (dev/prod/testing)
+- **Logging**: Structured logging for debugging and monitoring
+- **Tests**: Automated test suite with pytest
 
 ## Project Structure
 
 ```
 Pokemon project/
 ├── app/
-│   ├── __init__.py          # Flask app initialization
+│   ├── __init__.py          # Flask app initialization with env support
+│   ├── config.py            # Configuration classes (Dev/Prod/Test)
 │   ├── routes.py            # API endpoints
 │   ├── models/
 │   │   ├── __init__.py
@@ -29,12 +35,17 @@ Pokemon project/
 │       ├── __init__.py
 │       ├── pokeapi.py       # PokeAPI service
 │       └── data_processor.py # Data sanitization
+├── tests/                   # Automated tests
+│   ├── __init__.py
+│   ├── test_data_processor.py
+│   └── test_routes.py
 ├── venv/                    # Virtual environment
-├── run.py                   # Flask app runner
+├── run.py                   # Flask app runner with environment support
 ├── scout.py                 # CLI tool
 ├── menu.py                  # Interactive menu (bonus feature)
 ├── view_db.py               # Database viewer
 ├── requirements.txt         # Python dependencies
+├── .env.example             # Example environment variables
 ├── pokemon_list.txt         # Default Pokemon list
 └── README.md               # This file
 ```
@@ -76,7 +87,35 @@ Pokemon project/
    pip install -r requirements.txt
    ```
 
-4. **Initialize the database**
+4. **Configure environment variables (optional)**
+
+   Create a `.env` file in the project root directory for local development. You can use `.env.example` as a template:
+
+   ```powershell
+   # Copy the example
+   Copy-Item .env.example .env
+   ```
+
+   Available environment variables:
+   - `APP_ENV`: Set to `development`, `production`, or `testing` (default: `development`)
+   - `PORT`: Port to run Flask app (default: `5000`)
+   - `DATABASE_URL`: Database connection URL (default: `sqlite:///pokemon_scout.db`)
+
+   Example `.env` for development:
+   ```
+   APP_ENV=development
+   PORT=5000
+   DATABASE_URL=sqlite:///pokemon_scout.db
+   ```
+
+   Example for production:
+   ```
+   APP_ENV=production
+   PORT=8000
+   DATABASE_URL=sqlite:///pokemon_scout.db
+   ```
+
+5. **Initialize the database**
 
    ```powershell
    python scout.py --init-db
@@ -125,10 +164,18 @@ python scout.py bulbasaur squirtle charmander
 #### Start the Flask Server
 
 ```powershell
+# Use default settings (port 5000, development mode)
+python run.py
+
+# Or customize via environment variables
+$env:PORT=8080
+$env:APP_ENV=production
 python run.py
 ```
 
-The API will be available at `http://127.0.0.1:5000`
+The API will be available at `http://localhost:<PORT>` (default: `http://127.0.0.1:5000`)
+
+**Note:** In production mode (`APP_ENV=production`), the Flask debug server is disabled for security.
 
 #### API Endpoints
 
@@ -206,6 +253,76 @@ $pokemon = @('mewtwo', 'dragonite', 'garchomp', 'lucario')
 foreach ($name in $pokemon) {
     python scout.py $name
 }
+```
+
+## Testing
+
+The application includes automated tests to ensure data processing and API endpoints work correctly.
+
+### Running Tests
+
+```powershell
+# Run all tests
+pytest
+
+# Run with verbose output
+pytest -v
+
+# Run specific test file
+pytest tests/test_data_processor.py
+
+# Run with coverage report (install pytest-cov first)
+pip install pytest-cov
+pytest --cov=app tests/
+```
+
+### Test Coverage
+
+The test suite includes:
+- **`tests/test_data_processor.py`**: Tests for Pokemon data sanitization
+  - Happy path: Correctly processes raw PokeAPI responses
+  - Edge cases: Handles empty/null data gracefully
+  
+- **`tests/test_routes.py`**: Tests for Flask REST API endpoints
+  - Success case: Fetches and stores new Pokemon (returns 201)
+  - Not found: Handles missing Pokemon gracefully (returns 404)
+  - Uses in-memory SQLite database for isolated test execution
+
+### Testing Best Practices Used
+
+- **Isolation**: Each test uses a clean in-memory database
+- **Mocking**: External API calls are mocked to avoid network dependencies
+- **Fixtures**: Pytest fixtures provide reusable test setup
+
+## Logging
+
+The application uses Python's standard `logging` module for observability and debugging.
+
+### Log Levels
+
+- **INFO**: General application flow (server startup, successful operations)
+- **ERROR**: Error conditions and exceptions
+- **DEBUG**: Detailed diagnostic information (not shown by default)
+
+### Example Log Output
+
+```
+2025-11-18 14:30:45,123 INFO app: Database tables ensured
+2025-11-18 14:30:45,234 INFO __main__: Database initialized successfully!
+2025-11-18 14:30:45,345 INFO __main__: Starting Pokemon Scout API...
+2025-11-18 14:30:45,456 INFO __main__: Access the API at http://127.0.0.1:5000
+2025-11-18 14:30:47,789 INFO app.services.pokeapi: Fetching Pokemon from PokeAPI
+2025-11-18 14:30:48,012 INFO app.services.data_processor: Pokemon data sanitized
+```
+
+### Enabling Debug Logging
+
+To see more detailed logs during development:
+
+```powershell
+# Set debug environment before running
+$env:FLASK_ENV=development
+python run.py
 ```
 
 ## Data Structure
@@ -310,6 +427,22 @@ curl http://127.0.0.1:5000/api/pokemon/mewtwo
 curl http://127.0.0.1:5000/api/pokemon
 ```
 
+### Example 4: Run Tests
+
+```powershell
+pytest -v
+```
+
+Output:
+```
+tests/test_data_processor.py::test_sanitize_happy_path PASSED
+tests/test_data_processor.py::test_sanitize_handles_empty PASSED
+tests/test_routes.py::test_get_and_store_pokemon_success PASSED
+tests/test_routes.py::test_get_and_store_pokemon_not_found PASSED
+
+4 passed in 0.67s
+```
+
 ## Error Handling
 
 The app handles common issues pretty well:
@@ -317,6 +450,7 @@ The app handles common issues pretty well:
 - Handles API timeouts and connection problems
 - Won't add duplicate Pokemon
 - Validates all data before saving
+- Logs errors for debugging
 
 ## Database Location
 
@@ -347,11 +481,21 @@ Just reinitialize it:
 python scout.py --init-db
 ```
 
+**Tests failing?**
+Make sure pytest is installed and run from project root:
+```powershell
+pip install -r requirements.txt
+pytest -v
+```
+
 ## Technologies Used
 
 - **Flask 3.0.0**: Web framework for REST API
 - **SQLAlchemy 2.0.23**: ORM for database operations
 - **Requests 2.31.0**: HTTP library for PokeAPI calls
+- **python-dotenv 1.0.0**: Load environment variables from `.env` files
+- **pytest 7.4.0**: Testing framework
+- **pytest-mock 3.12.0**: Mocking utilities for pytest
 - **SQLite**: Lightweight database
 - **PokeAPI**: Pokemon data source
 
@@ -363,6 +507,9 @@ This project was developed by **Vilmar Junior** as a technical challenge assignm
 - Database design with SQLAlchemy
 - Clean code architecture
 - Documentation and user experience
+- Configuration management
+- Logging and monitoring
+- Automated testing
 
 All Pokemon data is sourced from [PokeAPI](https://pokeapi.co/). Pokemon and related content are owned by Nintendo/Game Freak/Creatures Inc.
 
